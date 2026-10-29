@@ -93,4 +93,18 @@ jobs:
 
       - name: Run Check-in
         run: |
-          ./cc98-autosign-fast
+          max_retries=3
+          for i in $(seq 1 $max_retries); do
+            echo "::notice::正在执行第 $i 次签到尝试..."
+            if ./cc98-autosign-fast; then
+              echo "::notice::签到成功！"
+              exit 0
+            fi
+            if [ "$i" -lt "$max_retries" ]; then
+              echo "::warning::第 $i 次尝试未完成，等待 6 秒后自动重试..."
+              rm -f .webvpn-cookie-cache.json
+              sleep 6
+            fi
+          done
+          echo "::error::连续 $max_retries 次尝试均未成功"
+          exit 1
