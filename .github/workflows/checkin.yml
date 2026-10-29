@@ -1,0 +1,52 @@
+name: CC98 Daily Check-in
+
+on:
+  workflow_dispatch: # 支持在 Actions 界面手动点击运行测试
+  schedule:
+    # 每天北京时间 08:35 (对应 UTC 00:35)，避开整点高峰
+    - cron: '35 0 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  checkin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Download cc98-autosign-fast
+        run: |
+          curl -sL "https://github.com/Anchorite-no/cc98-autosign-fast/releases/latest/download/cc98-autosign-fast-linux-amd64.tar.gz" | tar -xz --strip-components=1
+          chmod +x cc98-autosign-fast
+
+      - name: Generate .env configuration
+        env:
+          WEBVPN_USER: ${{ secrets.WEBVPN_USER }}
+          WEBVPN_PASS: ${{ secrets.WEBVPN_PASS }}
+          CC98_USER: ${{ secrets.CC98_USER }}
+          CC98_PASS: ${{ secrets.CC98_PASS }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${WEBVPN_USER:-}" ] || [ -z "${WEBVPN_PASS:-}" ]; then
+            echo "::error::缺少 WEBVPN_USER 或 WEBVPN_PASS，请在仓库 Settings -> Secrets and variables -> Actions 中设置"
+            exit 1
+          fi
+
+          if [ -z "${CC98_USER:-}" ] || [ -z "${CC98_PASS:-}" ]; then
+            echo "::error::缺少 CC98_USER 或 CC98_PASS，请在仓库 Settings -> Secrets and variables -> Actions 中设置"
+            exit 1
+          fi
+
+          cat <<EOF > .env
+          WEBVPN_USER=${WEBVPN_USER}
+          WEBVPN_PASS=${WEBVPN_PASS}
+          CC98_ACCOUNT_COUNT=1
+          CC98_USER_1=${CC98_USER}
+          CC98_PASS_1=${CC98_PASS}
+          EOF
+
+      - name: Run Check-in
+        run: |
+          ./cc98-autosign-fast

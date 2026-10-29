@@ -1,0 +1,5 @@
+# 敏感凭据与缓存，禁止提交到 Git
+.env
+.webvpn-cookie-cache.json
+*.log
+dist/
