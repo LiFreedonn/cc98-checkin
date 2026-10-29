@@ -24,10 +24,10 @@ jobs:
         env:
           WEBVPN_USER: ${{ secrets.WEBVPN_USER }}
           WEBVPN_PASS: ${{ secrets.WEBVPN_PASS }}
-          # 账号 1（兼容已有的 CC98_USER / CC98_PASS）
-          CC98_USER_1: ${{ secrets.CC98_USER_1 || secrets.CC98_USER }}
-          CC98_PASS_1: ${{ secrets.CC98_PASS_1 || secrets.CC98_PASS }}
-          # 多账号支持 (2 - 10)
+          CC98_USER: ${{ secrets.CC98_USER }}
+          CC98_PASS: ${{ secrets.CC98_PASS }}
+          CC98_USER_1: ${{ secrets.CC98_USER_1 }}
+          CC98_PASS_1: ${{ secrets.CC98_PASS_1 }}
           CC98_USER_2: ${{ secrets.CC98_USER_2 }}
           CC98_PASS_2: ${{ secrets.CC98_PASS_2 }}
           CC98_USER_3: ${{ secrets.CC98_USER_3 }}
@@ -36,16 +36,6 @@ jobs:
           CC98_PASS_4: ${{ secrets.CC98_PASS_4 }}
           CC98_USER_5: ${{ secrets.CC98_USER_5 }}
           CC98_PASS_5: ${{ secrets.CC98_PASS_5 }}
-          CC98_USER_6: ${{ secrets.CC98_USER_6 }}
-          CC98_PASS_6: ${{ secrets.CC98_PASS_6 }}
-          CC98_USER_7: ${{ secrets.CC98_USER_7 }}
-          CC98_PASS_7: ${{ secrets.CC98_PASS_7 }}
-          CC98_USER_8: ${{ secrets.CC98_USER_8 }}
-          CC98_PASS_8: ${{ secrets.CC98_PASS_8 }}
-          CC98_USER_9: ${{ secrets.CC98_USER_9 }}
-          CC98_PASS_9: ${{ secrets.CC98_PASS_9 }}
-          CC98_USER_10: ${{ secrets.CC98_USER_10 }}
-          CC98_PASS_10: ${{ secrets.CC98_PASS_10 }}
         run: |
           set -euo pipefail
 
@@ -54,34 +44,42 @@ jobs:
             exit 1
           fi
 
-          count=0
-          accounts_config=""
+          python3 - << 'PYEOF'
+          import os
+          import sys
 
-          for i in $(seq 1 10); do
-            u_var="CC98_USER_$i"
-            p_var="CC98_PASS_$i"
-            u_val="${!u_var:-}"
-            p_val="${!p_var:-}"
+          webvpn_user = os.environ.get("WEBVPN_USER", "").strip()
+          webvpn_pass = os.environ.get("WEBVPN_PASS", "").strip()
 
-            if [ -n "$u_val" ] && [ -n "$p_val" ]; then
-              count=$((count + 1))
-              accounts_config="${accounts_config}
-CC98_USER_${count}=${u_val}
-CC98_PASS_${count}=${p_val}"
-            fi
-          done
+          accounts = []
 
-          if [ "$count" -eq 0 ]; then
-            echo "::error::未检测到任何有效 CC98 账号！请设置 CC98_USER 或 CC98_USER_1"
-            exit 1
-          fi
+          # 账号 1 兼容：优先读取 CC98_USER_1，其次 CC98_USER
+          u1 = os.environ.get("CC98_USER_1", "").strip() or os.environ.get("CC98_USER", "").strip()
+          p1 = os.environ.get("CC98_PASS_1", "").strip() or os.environ.get("CC98_PASS", "").strip()
+          if u1 and p1:
+              accounts.append((u1, p1))
 
-          cat <<EOF > .env
-          WEBVPN_USER=${WEBVPN_USER}
-          WEBVPN_PASS=${WEBVPN_PASS}
-          CC98_ACCOUNT_COUNT=${count}
-          ${accounts_config}
-          EOF
+          # 账号 2 到 5
+          for i in range(2, 6):
+              u = os.environ.get(f"CC98_USER_{i}", "").strip()
+              p = os.environ.get(f"CC98_PASS_{i}", "").strip()
+              if u and p:
+                  accounts.append((u, p))
+
+          if not accounts:
+              print("::error::未检测到任何 CC98 账号！请设置 CC98_USER 或 CC98_USER_1", file=sys.stderr)
+              sys.exit(1)
+
+          with open(".env", "w", encoding="utf-8") as f:
+              f.write(f"WEBVPN_USER={webvpn_user}\n")
+              f.write(f"WEBVPN_PASS={webvpn_pass}\n")
+              f.write(f"CC98_ACCOUNT_COUNT={len(accounts)}\n")
+              for idx, (u, p) in enumerate(accounts, start=1):
+                  f.write(f"CC98_USER_{idx}={u}\n")
+                  f.write(f"CC98_PASS_{idx}={p}\n")
+
+          print(f"成功加载 {len(accounts)} 个 CC98 账号配置")
+          PYEOF
 
       - name: Run Check-in
         run: |
