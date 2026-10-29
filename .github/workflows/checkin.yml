@@ -36,6 +36,16 @@ jobs:
           CC98_PASS_4: ${{ secrets.CC98_PASS_4 }}
           CC98_USER_5: ${{ secrets.CC98_USER_5 }}
           CC98_PASS_5: ${{ secrets.CC98_PASS_5 }}
+          CC98_USER_6: ${{ secrets.CC98_USER_6 }}
+          CC98_PASS_6: ${{ secrets.CC98_PASS_6 }}
+          CC98_USER_7: ${{ secrets.CC98_USER_7 }}
+          CC98_PASS_7: ${{ secrets.CC98_PASS_7 }}
+          CC98_USER_8: ${{ secrets.CC98_USER_8 }}
+          CC98_PASS_8: ${{ secrets.CC98_PASS_8 }}
+          CC98_USER_9: ${{ secrets.CC98_USER_9 }}
+          CC98_PASS_9: ${{ secrets.CC98_PASS_9 }}
+          CC98_USER_10: ${{ secrets.CC98_USER_10 }}
+          CC98_PASS_10: ${{ secrets.CC98_PASS_10 }}
         run: |
           set -euo pipefail
 
@@ -59,8 +69,8 @@ jobs:
           if u1 and p1:
               accounts.append((u1, p1))
 
-          # 账号 2 到 5
-          for i in range(2, 6):
+          # 账号 2 到 10
+          for i in range(2, 11):
               u = os.environ.get(f"CC98_USER_{i}", "").strip()
               p = os.environ.get(f"CC98_PASS_{i}", "").strip()
               if u and p:
