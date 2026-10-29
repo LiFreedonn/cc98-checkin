@@ -1,7 +1,7 @@
 name: CC98 Daily Check-in
 
 on:
-  workflow_dispatch: # 支持在 Actions 界面手动点击运行测试
+  workflow_dispatch: # 支持在 Actions 界面或外部 API 手动/定时触发
   schedule:
     # 每天北京时间 08:35 (对应 UTC 00:35)，避开整点高峰
     - cron: '35 0 * * *'
@@ -24,8 +24,28 @@ jobs:
         env:
           WEBVPN_USER: ${{ secrets.WEBVPN_USER }}
           WEBVPN_PASS: ${{ secrets.WEBVPN_PASS }}
-          CC98_USER: ${{ secrets.CC98_USER }}
-          CC98_PASS: ${{ secrets.CC98_PASS }}
+          # 账号 1（兼容已有的 CC98_USER / CC98_PASS）
+          CC98_USER_1: ${{ secrets.CC98_USER_1 || secrets.CC98_USER }}
+          CC98_PASS_1: ${{ secrets.CC98_PASS_1 || secrets.CC98_PASS }}
+          # 多账号支持 (2 - 10)
+          CC98_USER_2: ${{ secrets.CC98_USER_2 }}
+          CC98_PASS_2: ${{ secrets.CC98_PASS_2 }}
+          CC98_USER_3: ${{ secrets.CC98_USER_3 }}
+          CC98_PASS_3: ${{ secrets.CC98_PASS_3 }}
+          CC98_USER_4: ${{ secrets.CC98_USER_4 }}
+          CC98_PASS_4: ${{ secrets.CC98_PASS_4 }}
+          CC98_USER_5: ${{ secrets.CC98_USER_5 }}
+          CC98_PASS_5: ${{ secrets.CC98_PASS_5 }}
+          CC98_USER_6: ${{ secrets.CC98_USER_6 }}
+          CC98_PASS_6: ${{ secrets.CC98_PASS_6 }}
+          CC98_USER_7: ${{ secrets.CC98_USER_7 }}
+          CC98_PASS_7: ${{ secrets.CC98_PASS_7 }}
+          CC98_USER_8: ${{ secrets.CC98_USER_8 }}
+          CC98_PASS_8: ${{ secrets.CC98_PASS_8 }}
+          CC98_USER_9: ${{ secrets.CC98_USER_9 }}
+          CC98_PASS_9: ${{ secrets.CC98_PASS_9 }}
+          CC98_USER_10: ${{ secrets.CC98_USER_10 }}
+          CC98_PASS_10: ${{ secrets.CC98_PASS_10 }}
         run: |
           set -euo pipefail
 
@@ -34,17 +54,33 @@ jobs:
             exit 1
           fi
 
-          if [ -z "${CC98_USER:-}" ] || [ -z "${CC98_PASS:-}" ]; then
-            echo "::error::缺少 CC98_USER 或 CC98_PASS，请在仓库 Settings -> Secrets and variables -> Actions 中设置"
+          count=0
+          accounts_config=""
+
+          for i in $(seq 1 10); do
+            u_var="CC98_USER_$i"
+            p_var="CC98_PASS_$i"
+            u_val="${!u_var:-}"
+            p_val="${!p_var:-}"
+
+            if [ -n "$u_val" ] && [ -n "$p_val" ]; then
+              count=$((count + 1))
+              accounts_config="${accounts_config}
+CC98_USER_${count}=${u_val}
+CC98_PASS_${count}=${p_val}"
+            fi
+          done
+
+          if [ "$count" -eq 0 ]; then
+            echo "::error::未检测到任何有效 CC98 账号！请设置 CC98_USER 或 CC98_USER_1"
             exit 1
           fi
 
           cat <<EOF > .env
           WEBVPN_USER=${WEBVPN_USER}
           WEBVPN_PASS=${WEBVPN_PASS}
-          CC98_ACCOUNT_COUNT=1
-          CC98_USER_1=${CC98_USER}
-          CC98_PASS_1=${CC98_PASS}
+          CC98_ACCOUNT_COUNT=${count}
+          ${accounts_config}
           EOF
 
       - name: Run Check-in
